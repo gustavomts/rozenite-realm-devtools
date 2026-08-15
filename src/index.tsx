@@ -39,7 +39,6 @@ export default function RealmDevToolsPanel() {
     pageResult,
     queryError,
     loading,
-    requestSchemas,
     requestPage,
   } = useRealmDevToolsPanel();
   const [schemaFilter, setSchemaFilter] = useState('');
@@ -96,11 +95,6 @@ export default function RealmDevToolsPanel() {
     }
   };
 
-  const refresh = () => {
-    requestSchemas();
-    if (selected) requestPage(selected, appliedQuery, page);
-  };
-
   const total = visiblePage?.total ?? 0;
   const rows = visiblePage?.rows ?? [];
   const resultPage = visiblePage?.page ?? page;
@@ -128,10 +122,7 @@ export default function RealmDevToolsPanel() {
       <View style={styles.main}>
         {selectedSchema ? (
           <>
-            <View style={styles.titleRow}>
-              <Text style={styles.title}>{selectedSchema.name}</Text>
-              <ActionButton label="Refresh" onPress={refresh} />
-            </View>
+            <Text style={styles.title}>{selectedSchema.name}</Text>
             <View style={styles.queryRow}>
               <TextInput
                 autoCapitalize="none"
@@ -205,11 +196,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   main: { flex: 1, padding: 16, gap: 10 },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   title: {
     color: '#e5e7eb',
     fontFamily: 'monospace',

@@ -48,10 +48,6 @@ export function useRealmDevToolsPanel() {
     };
   }, [client]);
 
-  const requestSchemas = useCallback(() => {
-    client?.send('realm:request-schemas', undefined);
-  }, [client]);
-
   const requestPage = useCallback(
     (schemaName: string, query: string, page: number) => {
       const requestId = ++latestRequest.current;
@@ -72,7 +68,6 @@ export function useRealmDevToolsPanel() {
     pageResult,
     queryError,
     loading,
-    requestSchemas,
     requestPage,
   };
 }

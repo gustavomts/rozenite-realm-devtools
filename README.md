@@ -8,14 +8,14 @@ A read-only [Rozenite](https://github.com/callstackincubator/rozenite) panel for
 - Realm Query Language filtering
 - Fixed 100-row pagination
 - Compact linked-object primary keys
-- Manual refresh and production no-op entry point
+- Live updates and production no-op entry point
 
 ## Install
 
 First enable Rozenite in the app, then install the plugin from GitHub:
 
 ```bash
-npm install -D github:gustavomts/rozenite-realm-devtools#v0.1.1
+npm install -D github:gustavomts/rozenite-realm-devtools#v0.1.2
 ```
 
 Pass the open Realm instance near the database provider:
@@ -55,7 +55,7 @@ name CONTAINS[c] "john"
 useRealmDevTools(realm: Realm | null | undefined): void
 ```
 
-The inspector is read-only. It supports one open Realm, refreshes manually, truncates displayed strings after 500 characters, and shows at most 20 linked primary keys per list cell.
+The inspector is read-only. It supports one open Realm, updates the active page after Realm changes, truncates displayed strings after 500 characters, and shows at most 20 linked primary keys per list cell.
 
 ## License
 

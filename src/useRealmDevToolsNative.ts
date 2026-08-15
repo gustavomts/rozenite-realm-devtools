@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import type { Realm } from 'realm';
 
 import { getPage, getSchemaSummaries } from './realm-utils';
-import type { EventMap } from './types';
+import type { EventMap, PageRequest } from './types';
 
 const PLUGIN_ID = 'rozenite-realm-devtools';
 
@@ -16,12 +16,7 @@ export function useRealmDevToolsNative(realm: Realm | null | undefined) {
     const sendSchemas = () => {
       client.send('realm:schemas', getSchemaSummaries(realm));
     };
-
-    const schemasRequest = client.onMessage(
-      'realm:request-schemas',
-      sendSchemas,
-    );
-    const pageRequest = client.onMessage('realm:request-page', (request) => {
+    const sendPage = (request: PageRequest) => {
       try {
         client.send('realm:page', getPage(realm, request));
       } catch (error) {
@@ -30,10 +25,26 @@ export function useRealmDevToolsNative(realm: Realm | null | undefined) {
           error: error instanceof Error ? error.message : String(error),
         });
       }
-    });
+    };
+    let activeRequest: PageRequest | undefined;
 
+    const schemasRequest = client.onMessage(
+      'realm:request-schemas',
+      sendSchemas,
+    );
+    const pageRequest = client.onMessage('realm:request-page', (request) => {
+      activeRequest = request;
+      sendPage(request);
+    });
+    const onChange = () => {
+      sendSchemas();
+      if (activeRequest) sendPage(activeRequest);
+    };
+
+    realm.addListener('change', onChange);
     sendSchemas();
     return () => {
+      if (!realm.isClosed) realm.removeListener('change', onChange);
       schemasRequest.remove();
       pageRequest.remove();
     };
