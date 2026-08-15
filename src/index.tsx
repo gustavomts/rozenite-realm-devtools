@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -46,6 +46,11 @@ export default function RealmDevToolsPanel() {
   const [queryDraft, setQueryDraft] = useState('');
   const [appliedQuery, setAppliedQuery] = useState('');
   const [page, setPage] = useState(0);
+  const schemaState = useRef(new Map<string, {
+    queryDraft: string;
+    appliedQuery: string;
+    page: number;
+  }>());
 
   const visibleSchemas = useMemo(
     () => schemas.filter((schema) =>
@@ -67,10 +72,14 @@ export default function RealmDevToolsPanel() {
   }, [appliedQuery, page, requestPage, selected]);
 
   const selectSchema = (name: string) => {
+    if (selected) {
+      schemaState.current.set(selected, { queryDraft, appliedQuery, page });
+    }
+    const saved = schemaState.current.get(name);
     setSelected(name);
-    setQueryDraft('');
-    setAppliedQuery('');
-    setPage(0);
+    setQueryDraft(saved?.queryDraft ?? '');
+    setAppliedQuery(saved?.appliedQuery ?? '');
+    setPage(saved?.page ?? 0);
   };
 
   const applyQuery = () => {
