@@ -46,9 +46,13 @@ export function useRealmDevToolsNative(realm: Realm | null | undefined) {
     };
 
     realm.addListener('change', onChange);
+    realm.addListener('schema', onChange);
     sendSchemas();
     return () => {
-      if (!realm.isClosed) realm.removeListener('change', onChange);
+      if (!realm.isClosed) {
+        realm.removeListener('change', onChange);
+        realm.removeListener('schema', onChange);
+      }
       schemasRequest.remove();
       pageRequest.remove();
     };

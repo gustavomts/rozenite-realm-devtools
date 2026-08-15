@@ -11,13 +11,14 @@ A read-only [Rozenite](https://github.com/callstackincubator/rozenite) panel for
 - Compact linked-object primary keys
 - Clickable object, list, and set links
 - Live updates and production no-op entry point
+- Live schema updates after migrations
 
 ## Install
 
 First enable Rozenite in the app, then install the plugin from GitHub:
 
 ```bash
-npm install -D github:gustavomts/rozenite-realm-devtools#v0.1.4
+npm install -D github:gustavomts/rozenite-realm-devtools#v0.1.5
 ```
 
 Pass the open Realm instance near the database provider:
