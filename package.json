@@ -1,0 +1,60 @@
+{
+  "name": "rozenite-realm-devtools",
+  "version": "0.1.1",
+  "description": "Rozenite DevTools plugin for inspecting Realm databases in React Native apps",
+  "type": "module",
+  "license": "MIT",
+  "author": "Gustavo Matos",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gustavomts/rozenite-realm-devtools.git"
+  },
+  "keywords": [
+    "react-native",
+    "devtools",
+    "realm",
+    "database",
+    "rozenite",
+    "inspector"
+  ],
+  "main": "./dist/react-native/index.cjs",
+  "module": "./dist/react-native/index.js",
+  "types": "./dist/react-native/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rozenite build",
+    "test": "node --experimental-strip-types --test src/realm-utils.test.ts",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@rozenite/plugin-bridge": "2.1.0"
+  },
+  "devDependencies": {
+    "@rozenite/vite-plugin": "2.1.0",
+    "@types/react": "~19.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.6",
+    "react-native-web": "^0.21.2",
+    "realm": "12.15.0",
+    "rozenite": "2.1.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.3.1"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "realm": ">=12"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/react-native/index.d.ts",
+      "import": "./dist/react-native/index.js",
+      "require": "./dist/react-native/index.cjs"
+    },
+    "./package.json": "./package.json"
+  }
+}
