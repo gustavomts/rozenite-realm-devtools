@@ -11,6 +11,7 @@ import { PAGE_SIZE } from './realm-utils';
 import { SchemaList } from './SchemaList';
 import { SchemaTable } from './SchemaTable';
 import { useRealmDevToolsPanel } from './useRealmDevTools';
+import type { LinkTarget, QueryArgument } from './types';
 
 function ActionButton({
   disabled = false,
@@ -45,10 +46,12 @@ export default function RealmDevToolsPanel() {
   const [selected, setSelected] = useState<string | null>(null);
   const [queryDraft, setQueryDraft] = useState('');
   const [appliedQuery, setAppliedQuery] = useState('');
+  const [queryArgument, setQueryArgument] = useState<QueryArgument>();
   const [page, setPage] = useState(0);
   const schemaState = useRef(new Map<string, {
     queryDraft: string;
     appliedQuery: string;
+    queryArgument?: QueryArgument;
     page: number;
   }>());
 
@@ -68,26 +71,41 @@ export default function RealmDevToolsPanel() {
   }, [schemas, selected, selectedSchema]);
 
   useEffect(() => {
-    if (selected) requestPage(selected, appliedQuery, page);
-  }, [appliedQuery, page, requestPage, selected]);
+    if (selected) requestPage(selected, appliedQuery, page, queryArgument);
+  }, [appliedQuery, page, queryArgument, requestPage, selected]);
 
   const selectSchema = (name: string) => {
     if (selected) {
-      schemaState.current.set(selected, { queryDraft, appliedQuery, page });
+      schemaState.current.set(selected, {
+        queryDraft,
+        appliedQuery,
+        queryArgument,
+        page,
+      });
     }
     const saved = schemaState.current.get(name);
     setSelected(name);
     setQueryDraft(saved?.queryDraft ?? '');
     setAppliedQuery(saved?.appliedQuery ?? '');
+    setQueryArgument(saved?.queryArgument);
     setPage(saved?.page ?? 0);
+  };
+
+  const openLink = (link: LinkTarget) => {
+    selectSchema(link.schemaName);
+    setQueryDraft(link.query);
+    setAppliedQuery(link.query);
+    setQueryArgument(link.argument);
+    setPage(0);
   };
 
   const applyQuery = () => {
     if (!selected) return;
     const query = queryDraft.trim();
     if (query === appliedQuery && page === 0) {
-      requestPage(selected, query, 0);
+      requestPage(selected, query, 0, queryArgument);
     } else {
+      setQueryArgument(undefined);
       setAppliedQuery(query);
       setPage(0);
     }
@@ -95,6 +113,7 @@ export default function RealmDevToolsPanel() {
 
   const clearQuery = () => {
     setQueryDraft('');
+    setQueryArgument(undefined);
     if (!selected) return;
     if (!appliedQuery && page === 0) {
       requestPage(selected, '', 0);
@@ -152,6 +171,7 @@ export default function RealmDevToolsPanel() {
               columns={selectedSchema.properties}
               rows={rows}
               rowOffset={resultPage * PAGE_SIZE}
+              onOpenLink={openLink}
             />
             <View style={styles.footer}>
               <Text style={styles.footerText}>

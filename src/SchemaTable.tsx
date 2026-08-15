@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import type { RowSnapshot } from './types';
+import type { LinkTarget, RowSnapshot } from './types';
 
 const CELL_WIDTH = 180;
 const ROW_NUMBER_WIDTH = 56;
@@ -9,9 +9,38 @@ type Props = {
   columns: string[];
   rows: RowSnapshot[];
   rowOffset: number;
+  onOpenLink: (link: LinkTarget) => void;
 };
 
-function Cell({ value }: { value: RowSnapshot[string] }) {
+function Cell({
+  value,
+  onOpenLink,
+}: {
+  value: RowSnapshot[string];
+  onOpenLink: (link: LinkTarget) => void;
+}) {
+  if (value && typeof value === 'object') {
+    return (
+      <View style={styles.cell}>
+        <Text style={styles.cellText}>
+          {value.collection && '['}
+          {value.links.map((link, index) => (
+            <Text
+              accessibilityRole="link"
+              key={`${link.schemaName}:${link.query}:${index}`}
+              onPress={() => onOpenLink(link)}
+              style={styles.linkText}
+            >
+              {`${index ? ', ' : ''}${link.label}`}
+            </Text>
+          ))}
+          {value.remaining ? ` … +${value.remaining}` : ''}
+          {value.collection && ']'}
+        </Text>
+      </View>
+    );
+  }
+
   const color = value === null
     ? '#6b7280'
     : typeof value === 'number'
@@ -29,7 +58,7 @@ function Cell({ value }: { value: RowSnapshot[string] }) {
   );
 }
 
-export function SchemaTable({ columns, rows, rowOffset }: Props) {
+export function SchemaTable({ columns, rows, rowOffset, onOpenLink }: Props) {
   const tableWidth = ROW_NUMBER_WIDTH + columns.length * CELL_WIDTH;
 
   return (
@@ -52,7 +81,11 @@ export function SchemaTable({ columns, rows, rowOffset }: Props) {
                 <Text style={styles.rowNumber}>{rowOffset + index + 1}</Text>
               </View>
               {columns.map((column) => (
-                <Cell key={column} value={row[column] ?? null} />
+                <Cell
+                  key={column}
+                  value={row[column] ?? null}
+                  onOpenLink={onOpenLink}
+                />
               ))}
             </View>
           ))}
@@ -108,6 +141,7 @@ const styles = StyleSheet.create({
     borderRightColor: '#1f2937',
   },
   cellText: { fontFamily: 'monospace', fontSize: 12 },
+  linkText: { color: '#60a5fa', textDecorationLine: 'underline' },
   rowNumberCell: {
     width: ROW_NUMBER_WIDTH,
     justifyContent: 'center',

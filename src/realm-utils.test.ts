@@ -6,6 +6,7 @@ import {
   getPage,
   getSchemaSummaries,
   PAGE_SIZE,
+  serializeRow,
 } from './realm-utils.ts';
 
 const schemas: ObjectSchema[] = [
@@ -45,8 +46,8 @@ const users = Array.from({ length: PAGE_SIZE + 1 }, (_, index) => ({
 
 function results(values: unknown[]) {
   return Object.assign(values, {
-    filtered(query: string) {
-      const uid = Number(query.match(/_uid == (\d+)/)?.[1]);
+    filtered(query: string, ...args: unknown[]) {
+      const uid = Number(args[0] ?? query.match(/_uid == (\d+)/)?.[1]);
       if (!uid) throw new Error('Invalid query');
       return results(values.filter((value) =>
         (value as { _uid: number })._uid === uid,
@@ -91,8 +92,21 @@ test('paginates and serializes links without recursively expanding them', () => 
 
   assert.equal(page.total, PAGE_SIZE + 1);
   assert.equal(page.rows?.length, 1);
-  assert.equal(page.rows?.[0].manager, 1);
-  assert.match(String(page.rows?.[0].coworkers), /… \+2$/);
+  assert.deepEqual(page.rows?.[0].manager, {
+    kind: 'links',
+    collection: false,
+    links: [{
+      label: '1',
+      schemaName: 'User',
+      query: '_uid == 1',
+      argument: { property: '_uid', value: 1 },
+    }],
+    remaining: 0,
+  });
+  const coworkers = page.rows?.[0].coworkers;
+  assert.ok(coworkers && typeof coworkers === 'object');
+  assert.equal(coworkers.links.length, 20);
+  assert.equal(coworkers.remaining, 2);
   assert.equal(page.rows?.[0].tags, '["one","two"]');
   assert.equal(page.rows?.[0].profile, '{"active":true}');
   assert.match(String(page.rows?.[0].signature), /… \(600 chars\)$/);
@@ -108,4 +122,54 @@ test('applies a Realm query before pagination', () => {
 
   assert.equal(page.total, 1);
   assert.equal(page.rows?.[0]._uid, 42);
+});
+
+test('uses a parameter when navigating to a linked primary key', () => {
+  const page = getPage(realm, {
+    requestId: 3,
+    schemaName: 'User',
+    query: '_uid == 42',
+    queryArgument: { property: '_uid', value: 42 },
+    page: 0,
+  });
+
+  assert.equal(page.total, 1);
+  assert.equal(page.rows?.[0]._uid, 42);
+});
+
+test('creates clickable links for string-key objects and sets', () => {
+  const schema: ObjectSchema = {
+    name: 'StringKey',
+    primaryKey: 'id',
+    properties: {
+      id: 'string',
+      parent: 'StringKey?',
+      peers: { type: 'set', objectType: 'StringKey' },
+    },
+  };
+  const id = `a'"\\b`;
+  const row = serializeRow(
+    { id: 'source', parent: { id }, peers: new Set([{ id }]) },
+    schema,
+    [schema],
+  );
+
+  const target = {
+    label: id,
+    schemaName: 'StringKey',
+    query: `id == ${JSON.stringify(id)}`,
+    argument: { property: 'id', value: id },
+  };
+  assert.deepEqual(row.parent, {
+    kind: 'links',
+    collection: false,
+    links: [target],
+    remaining: 0,
+  });
+  assert.deepEqual(row.peers, {
+    kind: 'links',
+    collection: true,
+    links: [target],
+    remaining: 0,
+  });
 });

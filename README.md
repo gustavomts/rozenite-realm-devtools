@@ -9,6 +9,7 @@ A read-only [Rozenite](https://github.com/callstackincubator/rozenite) panel for
 - Per-schema query and page state
 - Fixed 100-row pagination
 - Compact linked-object primary keys
+- Clickable object, list, and set links
 - Live updates and production no-op entry point
 
 ## Install
@@ -16,7 +17,7 @@ A read-only [Rozenite](https://github.com/callstackincubator/rozenite) panel for
 First enable Rozenite in the app, then install the plugin from GitHub:
 
 ```bash
-npm install -D github:gustavomts/rozenite-realm-devtools#v0.1.3
+npm install -D github:gustavomts/rozenite-realm-devtools#v0.1.4
 ```
 
 Pass the open Realm instance near the database provider:

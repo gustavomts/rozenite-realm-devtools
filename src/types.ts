@@ -1,4 +1,25 @@
-export type CellValue = string | number | boolean | null;
+export type PrimitiveCellValue = string | number | boolean | null;
+
+export type QueryArgument = {
+  property: string;
+  value: string | number;
+};
+
+export type LinkTarget = {
+  label: string;
+  schemaName: string;
+  query: string;
+  argument: QueryArgument;
+};
+
+export type LinkedCellValue = {
+  kind: 'links';
+  collection: boolean;
+  links: LinkTarget[];
+  remaining: number;
+};
+
+export type CellValue = PrimitiveCellValue | LinkedCellValue;
 
 export type RowSnapshot = Record<string, CellValue>;
 
@@ -12,6 +33,7 @@ export type PageRequest = {
   requestId: number;
   schemaName: string;
   query: string;
+  queryArgument?: QueryArgument;
   page: number;
 };
 

@@ -1,6 +1,6 @@
 import { useRozeniteDevToolsClient } from '@rozenite/plugin-bridge';
 import { useEffect } from 'react';
-import type { Realm } from 'realm';
+import Realm from 'realm';
 
 import { getPage, getSchemaSummaries } from './realm-utils';
 import type { EventMap, PageRequest } from './types';
@@ -18,7 +18,11 @@ export function useRealmDevToolsNative(realm: Realm | null | undefined) {
     };
     const sendPage = (request: PageRequest) => {
       try {
-        client.send('realm:page', getPage(realm, request));
+        client.send('realm:page', getPage(realm, request, (type, value) => {
+          if (type === 'objectId') return new Realm.BSON.ObjectId(String(value));
+          if (type === 'uuid') return new Realm.BSON.UUID(String(value));
+          return value;
+        }));
       } catch (error) {
         client.send('realm:page', {
           ...request,

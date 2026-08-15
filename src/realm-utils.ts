@@ -2,8 +2,11 @@ import type { ObjectSchema, Realm } from 'realm';
 
 import type {
   CellValue,
+  LinkedCellValue,
+  LinkTarget,
   PageRequest,
   PageResult,
+  PrimitiveCellValue,
   RowSnapshot,
   SchemaSummary,
 } from './types';
@@ -30,7 +33,7 @@ type RealmLike = Pick<Realm, 'schema' | 'objects'>;
 type PropertyInfo = { type: string; objectType?: string };
 type QueryResults = {
   length: number;
-  filtered(query: string): QueryResults;
+  filtered(query: string, ...args: unknown[]): QueryResults;
   slice(start: number, end: number): unknown[];
 };
 
@@ -85,7 +88,7 @@ function formatJson(value: unknown): string {
   }
 }
 
-function formatScalar(value: unknown): CellValue {
+function formatScalar(value: unknown): PrimitiveCellValue {
   if (value === null || value === undefined) return null;
   if (typeof value === 'string') return truncate(value);
   if (typeof value === 'number' || typeof value === 'boolean') return value;
@@ -106,6 +109,54 @@ function formatScalar(value: unknown): CellValue {
   return formatJson(value);
 }
 
+function linkTarget(
+  value: unknown,
+  schema: ObjectSchema,
+): LinkTarget | undefined {
+  if (!schema.primaryKey) return;
+
+  const type = propertyInfo(schema.properties[schema.primaryKey]).type;
+  const argumentValue = type === 'int' && typeof value === 'number'
+    ? value
+    : ['string', 'objectId', 'uuid'].includes(type)
+      ? String(value)
+      : undefined;
+  if (argumentValue === undefined) return;
+
+  const literal = type === 'string'
+    ? JSON.stringify(argumentValue)
+    : type === 'objectId'
+      ? `oid(${argumentValue})`
+      : type === 'uuid'
+        ? `uuid(${argumentValue})`
+        : String(argumentValue);
+  return {
+    label: String(formatScalar(value)),
+    schemaName: schema.name,
+    query: `${schema.primaryKey} == ${literal}`,
+    argument: { property: schema.primaryKey, value: argumentValue },
+  };
+}
+
+function linkedCell(
+  links: LinkTarget[],
+  collection: boolean,
+  remaining = 0,
+): LinkedCellValue {
+  return { kind: 'links', collection, links, remaining };
+}
+
+function displayValue(value: CellValue): PrimitiveCellValue {
+  if (value && typeof value === 'object') {
+    return value.collection
+      ? `${JSON.stringify(
+        value.links.map((link) => link.argument.value),
+      )}${value.remaining ? ` … +${value.remaining}` : ''}`
+      : value.links[0]?.label ?? null;
+  }
+  return value;
+}
+
 function findSchema(
   schemas: readonly ObjectSchema[],
   name: string | undefined,
@@ -121,7 +172,7 @@ function serializeEmbedded(
   return Object.fromEntries(
     Object.entries(schema.properties).map(([name, property]) => [
       name,
-      serializeProperty(value[name], property, schemas),
+      displayValue(serializeProperty(value[name], property, schemas)),
     ]),
   );
 }
@@ -141,9 +192,11 @@ function formatLinkedObject(
   }
 
   if (schema?.primaryKey) {
-    return formatScalar(
+    const target = linkTarget(
       (value as Record<string, unknown>)[schema.primaryKey],
+      schema,
     );
+    if (target) return linkedCell([target], false);
   }
 
   return `Object(${objectType ?? 'unknown'})`;
@@ -153,11 +206,27 @@ function formatCollection(
   value: unknown,
   objectType: string | undefined,
   schemas: readonly ObjectSchema[],
-): string {
+): CellValue {
   if (value === null || value === undefined) return '[]';
 
   const items = Array.from(value as Iterable<unknown>);
   const schema = findSchema(schemas, objectType);
+  if (schema?.primaryKey) {
+    const links = items.slice(0, MAX_LIST_ITEMS).flatMap((item) => {
+      const target = linkTarget(
+        (item as Record<string, unknown>)[schema.primaryKey!],
+        schema,
+      );
+      return target ? [target] : [];
+    });
+    if (links.length) {
+      return linkedCell(
+        links,
+        true,
+        Math.max(0, items.length - MAX_LIST_ITEMS),
+      );
+    }
+  }
   const displayed = items.slice(0, MAX_LIST_ITEMS).map((item) => {
     if (!objectType) return formatScalar(item);
     if (schema?.embedded) {
@@ -165,11 +234,6 @@ function formatCollection(
         item as Record<string, unknown>,
         schema,
         schemas,
-      );
-    }
-    if (schema?.primaryKey) {
-      return formatScalar(
-        (item as Record<string, unknown>)[schema.primaryKey],
       );
     }
     return `Object(${objectType})`;
@@ -231,6 +295,10 @@ export function getSchemaSummaries(realm: RealmLike): SchemaSummary[] {
 export function getPage(
   realm: RealmLike,
   request: PageRequest,
+  decodeArgument: (type: string, value: string | number) => unknown = (
+    _type,
+    value,
+  ) => value,
 ): PageResult {
   const schema = realm.schema.find(
     (candidate) => candidate.name === request.schemaName,
@@ -240,7 +308,16 @@ export function getPage(
   }
 
   let results = realm.objects(request.schemaName) as unknown as QueryResults;
-  if (request.query.trim()) results = results.filtered(request.query.trim());
+  if (request.queryArgument) {
+    if (request.queryArgument.property !== schema.primaryKey) {
+      throw new Error('Linked query does not match the schema primary key');
+    }
+    const type = propertyInfo(schema.properties[request.queryArgument.property]).type;
+    const value = decodeArgument(type, request.queryArgument.value);
+    results = results.filtered(`${request.queryArgument.property} == $0`, value);
+  } else if (request.query.trim()) {
+    results = results.filtered(request.query.trim());
+  }
 
   const page = Math.max(0, request.page);
   const start = page * PAGE_SIZE;

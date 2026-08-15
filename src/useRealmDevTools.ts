@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   EventMap,
   PageResult,
+  QueryArgument,
   SchemaSummary,
 } from './types';
 
@@ -49,7 +50,12 @@ export function useRealmDevToolsPanel() {
   }, [client]);
 
   const requestPage = useCallback(
-    (schemaName: string, query: string, page: number) => {
+    (
+      schemaName: string,
+      query: string,
+      page: number,
+      queryArgument?: QueryArgument,
+    ) => {
       const requestId = ++latestRequest.current;
       setLoading(true);
       setQueryError(undefined);
@@ -57,6 +63,7 @@ export function useRealmDevToolsPanel() {
         requestId,
         schemaName,
         query,
+        queryArgument,
         page,
       });
     },
