@@ -15,6 +15,7 @@ export const PAGE_SIZE = 100;
 
 const MAX_STRING_LENGTH = 500;
 const MAX_LIST_ITEMS = 20;
+const sensitiveProperty = /token|password|secret|authorization|api.?key/i;
 const primitiveTypes = new Set([
   'bool',
   'data',
@@ -266,6 +267,7 @@ export function serializeRow(
 ): RowSnapshot {
   return Object.fromEntries(
     Object.entries(schema.properties).map(([name, property]) => {
+      if (sensitiveProperty.test(name)) return [name, '<redacted>'];
       try {
         return [name, serializeProperty(value[name], property, schemas)];
       } catch {

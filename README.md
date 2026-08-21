@@ -60,6 +60,13 @@ useRealmDevTools(realm: Realm | null | undefined): void
 
 The inspector is read-only. It supports one open Realm, updates the active page after Realm changes, truncates displayed strings after 500 characters, and shows at most 20 linked primary keys per list cell.
 
+## Agent tools
+
+When a Rozenite Agent session is active, the plugin exposes two read-only tools:
+
+- `listSchemas` lists queryable schemas, properties, and row counts.
+- `queryRealm` runs an optional Realm Query Language filter and returns one 100-row page. Secret-like properties are redacted.
+
 ## License
 
 MIT

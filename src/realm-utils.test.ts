@@ -21,6 +21,7 @@ const schemas: ObjectSchema[] = [
       tags: { type: 'list', objectType: 'string' },
       profile: 'Profile?',
       signature: 'string?',
+      accessToken: 'string?',
     },
   },
   {
@@ -42,6 +43,7 @@ const users = Array.from({ length: PAGE_SIZE + 1 }, (_, index) => ({
   tags: ['one', 'two'],
   profile: { active: index % 2 === 0 },
   signature: 'x'.repeat(600),
+  accessToken: 'private',
 }));
 
 function results(values: unknown[]) {
@@ -76,6 +78,7 @@ test('lists queryable schemas, including empty ones', () => {
         'tags',
         'profile',
         'signature',
+        'accessToken',
       ],
     },
     { name: 'Empty', count: 0, properties: ['value'] },
@@ -110,6 +113,7 @@ test('paginates and serializes links without recursively expanding them', () => 
   assert.equal(page.rows?.[0].tags, '["one","two"]');
   assert.equal(page.rows?.[0].profile, '{"active":true}');
   assert.match(String(page.rows?.[0].signature), /… \(600 chars\)$/);
+  assert.equal(page.rows?.[0].accessToken, '<redacted>');
 });
 
 test('applies a Realm query before pagination', () => {
